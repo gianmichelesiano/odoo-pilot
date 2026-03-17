@@ -65,8 +65,9 @@ class AIAnalyzer:
 
     def _analyze_claude(self, user_prompt: str) -> BusinessData:
         """Use Anthropic SDK with structured output (messages.parse)."""
-        client = anthropic.Anthropic()
-        logger.info(f"Calling Claude ({self.settings.anthropic_model})...")
+        import httpx
+        client = anthropic.Anthropic(timeout=httpx.Timeout(60.0, connect=10.0))
+        logger.info(f"Calling Claude ({self.settings.anthropic_model})... (attendere ~10-20s)")
 
         parsed = client.messages.parse(
             model=self.settings.anthropic_model,
