@@ -4,10 +4,25 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+
+
+def _load_env() -> None:
+    """Load .env file from project root if present."""
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip())
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -48,10 +63,10 @@ def parse_args(argv: list[str] | None = None):
     run_cmd.add_argument("--output-dir", type=Path, default=Path("output"))
     run_cmd.add_argument("--delay", type=float, default=1.0)
     run_cmd.add_argument("--ollama", action="store_true", help="Use Ollama instead of Claude")
-    run_cmd.add_argument("--odoo-url", type=str, default="")
-    run_cmd.add_argument("--odoo-db", type=str, default="")
-    run_cmd.add_argument("--odoo-user", type=str, default="")
-    run_cmd.add_argument("--odoo-password", type=str, default="")
+    run_cmd.add_argument("--odoo-url", type=str, default=os.environ.get("ODOO_URL", ""))
+    run_cmd.add_argument("--odoo-db", type=str, default=os.environ.get("ODOO_DB", ""))
+    run_cmd.add_argument("--odoo-user", type=str, default=os.environ.get("ODOO_USER", ""))
+    run_cmd.add_argument("--odoo-password", type=str, default=os.environ.get("ODOO_PASSWORD", ""))
     run_cmd.add_argument("--no-dry-run", action="store_true", help="Actually write to Odoo (default: dry run)")
 
     return parser.parse_args(argv)
@@ -149,6 +164,7 @@ def cmd_analyze(args) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    _load_env()
     setup_logging()
     args = parse_args(argv)
 
