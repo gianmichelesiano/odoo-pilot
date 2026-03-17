@@ -17,6 +17,6 @@ class Settings:
     odoo_password: str = ""
 
     # AI config (Phase 2)
-    anthropic_model: str = "claude-sonnet-4-5"
+    anthropic_model: str = "claude-sonnet-4-6"
     ollama_model: str = "llama3.1"
     use_ollama: bool = False  # fallback flag

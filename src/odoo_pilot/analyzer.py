@@ -61,23 +61,30 @@ class AIAnalyzer:
             except Exception as e:
                 logger.warning(f"Claude API failed: {e}, falling back to Ollama")
 
+        if ollama is None:
+            raise RuntimeError("Ollama not installed. Run: pip install ollama")
         return self._analyze_ollama(user_prompt)
 
     def _analyze_claude(self, user_prompt: str) -> BusinessData:
-        """Use Anthropic SDK with structured output (messages.parse)."""
+        """Use Anthropic SDK — prompt Claude to return JSON, validate with Pydantic."""
         import httpx
         client = anthropic.Anthropic(timeout=httpx.Timeout(60.0, connect=10.0))
         logger.info(f"Calling Claude ({self.settings.anthropic_model})... (attendere ~10-20s)")
 
-        parsed = client.messages.parse(
+        schema = BusinessData.model_json_schema()
+        json_instruction = (
+            f"\n\nRespond with ONLY valid JSON matching this schema (no markdown, no explanation):\n{json.dumps(schema, indent=2)}"
+        )
+
+        response = client.messages.create(
             model=self.settings.anthropic_model,
             max_tokens=4096,
             system=SYSTEM_PROMPT,
-            output_format=BusinessData,
-            messages=[{"role": "user", "content": user_prompt}],
+            messages=[{"role": "user", "content": user_prompt + json_instruction}],
         )
 
-        result = parsed.parsed_output
+        raw = json.loads(response.content[0].text)
+        result = BusinessData.model_validate(raw)
         logger.info(f"Claude extracted: {result.business_name} ({result.business_type})")
         return result
 
