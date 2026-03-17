@@ -147,13 +147,15 @@ class WebScraper:
             logger.warning("Playwright not installed, using httpx only")
             async_playwright = None
 
+        pw_ctx = None
         pw = None
         browser = None
         pw_page = None
 
         try:
             if async_playwright:
-                pw = await async_playwright().__aenter__()
+                pw_ctx = async_playwright()
+                pw = await pw_ctx.__aenter__()
                 browser = await pw.chromium.launch(headless=True)
                 pw_page = await browser.new_page()
 
@@ -192,8 +194,8 @@ class WebScraper:
         finally:
             if browser:
                 await browser.close()
-            if pw:
-                await pw.__aexit__(None, None, None)
+            if pw_ctx:
+                await pw_ctx.__aexit__(None, None, None)
 
         if not pages:
             raise RuntimeError(f"No pages scraped from {url}")
