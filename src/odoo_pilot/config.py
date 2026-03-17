@@ -16,6 +16,9 @@ class Settings:
     odoo_user: str = ""
     odoo_password: str = ""
 
+    # Scraper engine preference
+    prefer_httpx: bool = True  # httpx+BS4 first (better for CSS-animated pages)
+
     # AI config (Phase 2)
     anthropic_model: str = "claude-sonnet-4-6"
     ollama_model: str = "llama3.1"

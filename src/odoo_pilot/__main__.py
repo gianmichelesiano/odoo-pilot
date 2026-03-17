@@ -22,7 +22,10 @@ def _load_env() -> None:
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, _, value = line.partition("=")
-            os.environ.setdefault(key.strip(), value.strip())
+            key, value = key.strip(), value.strip()
+            # Override empty env vars (setdefault would keep empty strings)
+            if value and not os.environ.get(key):
+                os.environ[key] = value
 
 from rich.console import Console
 from rich.logging import RichHandler

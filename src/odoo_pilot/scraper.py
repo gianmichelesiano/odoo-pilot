@@ -167,13 +167,17 @@ class WebScraper:
 
                 page_data = None
 
-                # Try Playwright first
-                if pw_page:
-                    page_data = await self._scrape_page_playwright(pw_page, current_url)
-
-                # Fallback to httpx
-                if page_data is None:
+                if self.settings.prefer_httpx:
+                    # httpx+BS4 first: gets full HTML including CSS-hidden content
                     page_data = await self._scrape_page_httpx(current_url)
+                    if page_data is None and pw_page:
+                        page_data = await self._scrape_page_playwright(pw_page, current_url)
+                else:
+                    # Playwright first (better for JS-rendered SPAs)
+                    if pw_page:
+                        page_data = await self._scrape_page_playwright(pw_page, current_url)
+                    if page_data is None:
+                        page_data = await self._scrape_page_httpx(current_url)
 
                 if page_data is None:
                     logger.error(f"Skipping {current_url}: both engines failed")
