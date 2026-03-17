@@ -42,6 +42,18 @@ def parse_args(argv: list[str] | None = None):
     analyze.add_argument("--ollama", action="store_true", help="Use Ollama instead of Claude")
     analyze.add_argument("--model", type=str, default=None, help="Override AI model name")
 
+    run_cmd = sub.add_parser("run", help="Full pipeline: scrape → analyze → write to Odoo")
+    run_cmd.add_argument("url", help="Base URL to scrape")
+    run_cmd.add_argument("--max-pages", type=int, default=50)
+    run_cmd.add_argument("--output-dir", type=Path, default=Path("output"))
+    run_cmd.add_argument("--delay", type=float, default=1.0)
+    run_cmd.add_argument("--ollama", action="store_true", help="Use Ollama instead of Claude")
+    run_cmd.add_argument("--odoo-url", type=str, default="")
+    run_cmd.add_argument("--odoo-db", type=str, default="")
+    run_cmd.add_argument("--odoo-user", type=str, default="")
+    run_cmd.add_argument("--odoo-password", type=str, default="")
+    run_cmd.add_argument("--no-dry-run", action="store_true", help="Actually write to Odoo (default: dry run)")
+
     return parser.parse_args(argv)
 
 
@@ -68,6 +80,35 @@ async def cmd_scrape(args) -> None:
         json.dump([p.to_dict() for p in pages], f, ensure_ascii=False, indent=2)
 
     console.print(f"\n[bold green]Done![/bold green] {len(pages)} pages scraped → {out_path}")
+
+
+async def cmd_run(args) -> None:
+    from odoo_pilot.pipeline import Pipeline
+
+    console = Console()
+    settings = Settings(
+        max_pages=args.max_pages,
+        output_dir=args.output_dir,
+        request_delay=args.delay,
+        use_ollama=args.ollama,
+        dry_run=not args.no_dry_run,
+        odoo_url=args.odoo_url,
+        odoo_db=args.odoo_db,
+        odoo_user=args.odoo_user,
+        odoo_password=args.odoo_password,
+    )
+
+    console.print(f"[bold]Running full pipeline[/bold] on {args.url}")
+    console.print(f"  dry_run={settings.dry_run}, ollama={settings.use_ollama}")
+
+    pipeline = Pipeline(settings)
+    summary = await pipeline.run(args.url)
+
+    console.print(f"\n[bold green]Pipeline complete![/bold green]")
+    console.print(f"  dry_run: {summary.get('dry_run')}")
+    console.print(f"  contact_id: {summary.get('contact_id')}")
+    console.print(f"  products: {len(summary.get('product_ids', []))}")
+    console.print(f"  modules: {summary.get('modules', [])}")
 
 
 def cmd_analyze(args) -> None:
@@ -115,6 +156,8 @@ def main(argv: list[str] | None = None) -> None:
         asyncio.run(cmd_scrape(args))
     elif args.command == "analyze":
         cmd_analyze(args)
+    elif args.command == "run":
+        asyncio.run(cmd_run(args))
     else:
         parse_args(["--help"])
         sys.exit(1)
