@@ -37,17 +37,20 @@ def test_build_user_prompt():
 
 
 def test_analyzer_claude_mock():
+    import json as _json
     settings = Settings()
     analyzer = AIAnalyzer(settings)
 
-    mock_result = BusinessData(business_name="Test", business_type="restaurant")
-    mock_parsed = MagicMock()
-    mock_parsed.parsed_output = mock_result
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=_json.dumps({
+        "business_name": "Test",
+        "business_type": "restaurant",
+    }))]
 
     with patch("odoo_pilot.analyzer.anthropic") as mock_anthropic:
         mock_client = MagicMock()
         mock_anthropic.Anthropic.return_value = mock_client
-        mock_client.messages.parse.return_value = mock_parsed
+        mock_client.messages.create.return_value = mock_response
 
         pages = [PageData(url="https://x.com", title="T", lang="en",
                           text="A restaurant", links=[], images=[], scraped_with="pw")]

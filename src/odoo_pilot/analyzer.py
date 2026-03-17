@@ -8,11 +8,6 @@ try:
 except ImportError:
     anthropic = None  # type: ignore[assignment]
 
-try:
-    import ollama
-except ImportError:
-    ollama = None  # type: ignore[assignment]
-
 from odoo_pilot.config import Settings
 from odoo_pilot.models import BusinessData
 from odoo_pilot.scraper import PageData
@@ -55,15 +50,11 @@ class AIAnalyzer:
         """Analyze scraped pages and return structured BusinessData."""
         user_prompt = _build_user_prompt(pages)
 
-        if not self.settings.use_ollama:
-            try:
-                return self._analyze_claude(user_prompt)
-            except Exception as e:
-                logger.warning(f"Claude API failed: {e}, falling back to Ollama")
-
-        if ollama is None:
-            raise RuntimeError("Ollama not installed. Run: pip install ollama")
-        return self._analyze_ollama(user_prompt)
+        try:
+            return self._analyze_claude(user_prompt)
+        except Exception as e:
+            logger.error(f"Claude API failed: {e}")
+            raise  # Ollama fallback disabled for now
 
     def _analyze_claude(self, user_prompt: str) -> BusinessData:
         """Use Anthropic SDK — prompt Claude to return JSON, validate with Pydantic."""
